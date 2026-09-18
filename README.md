@@ -1,76 +1,87 @@
 # Bassline
-### *AI-Powered Bass Transcription & 3D Visualization*
+
+### AI-assisted bass transcription & 3D visualization
 
 ![Next.js](https://img.shields.io/badge/Next.js-black?style=for-the-badge&logo=next.js&logoColor=white)
 ![React Three Fiber](https://img.shields.io/badge/React_Three_Fiber-black?style=for-the-badge&logo=react&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white)
 ![Demucs](https://img.shields.io/badge/Demucs-Meta-blue?style=for-the-badge)
-![TensorFlow](https://img.shields.io/badge/TensorFlow-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white)
 
 ![Demo Screenshot](./public/demo.png)
 
-## 📖 Project Overview
-"Bassline transforms any audio file (MP3/WAV) into an interactive 3D bass lesson. It uses state-of-the-art Source Separation (Demucs) and Pitch Detection (Basic Pitch) to isolate the bass line and generate a tablature in real-time."
+## Overview
 
-## ✨ Key Features
-- **🤖 AI-Driven DSP:** Bass stem isolation using Meta's Demucs model.
-- **🎸 Interactive 3D:** Real-time WebGL visualization (R3F) synced with AudioContext.
-- **🎼 Smart Tablature:** Dynamic difficulty mapping (Beginner/Intermediate/Pro) using graph theory pathfinding.
-- **🧠 Pipeline Explorer:** Interactive visualization of the backend architecture and data flow.
-- **🌍 International:** Full i18n support (English/French).
+Bassline transforms an audio file into an interactive bass lesson. The pipeline isolates the bass stem with Demucs, estimates notes with Basic Pitch, generates a playable tablature using graph-based pathfinding, and synchronizes the result with a React Three Fiber visualization.
 
-## 🛠️ Tech Stack
+## Key features
+
+- **Source separation:** bass stem isolation with Demucs.
+- **Pitch extraction:** note estimation with Basic Pitch.
+- **Smart tablature:** difficulty-aware fingering generated with graph-based pathfinding.
+- **Interactive 3D:** WebGL / React Three Fiber visualization synchronized with audio.
+- **Pipeline explorer:** visual explanation of the backend data flow.
+- **Internationalization:** French and English UI.
+
+## Tech stack
 
 ### Frontend
-- **Framework:** Next.js 14
-- **3D Engine:** React Three Fiber (Three.js)
-- **Styling:** Tailwind CSS
-- **Animation:** Framer Motion
-- **State Management:** Zustand
+- Next.js
+- React Three Fiber / Three.js
+- Tailwind CSS
+- Framer Motion
+- Zustand
 
 ### Backend
-- **Core:** Python, Flask
-- **AI Models:** Demucs (Hybrid Transformer), Basic Pitch (CNN)
-- **Infrastructure:** Redis (Task Queue)
+- Python
+- Flask
+- Demucs
+- Basic Pitch
+- Redis
+- Docker
 
-## 🚀 Getting Started
+## Getting started
 
-### 1. Clone the Repository
+### 1. Clone the repository
+
 ```bash
-git clone https://github.com/yourusername/bassline.git
-cd bassline
+git clone https://github.com/LeBoogiepop/Bassline.git
+cd Bassline
 ```
 
-### 2. Frontend Setup
-```bash
-# Install dependencies
-npm install
+### 2. Frontend
 
-# Run the development server
+```bash
+npm install
 npm run dev
 ```
 
-### 3. Backend Setup
-Open a new terminal and navigate to the backend directory:
+### 3. Backend
+
 ```bash
 cd backend
-
-# Create a virtual environment
 python -m venv venv
+```
 
-# Activate the virtual environment
-# Windows:
+Windows:
+
+```bash
 .\venv\Scripts\activate
-# macOS/Linux:
+```
+
+macOS / Linux:
+
+```bash
 source venv/bin/activate
+```
 
-# Install dependencies
+Then:
+
+```bash
 pip install -r requirements.txt
-
-# Start the Flask server
 python app.py
 ```
 
-## 📄 License
+## License
+
 Distributed under the MIT License.
