@@ -2,13 +2,6 @@ import os
 import logging
 from flask import Flask, jsonify
 from flask_cors import CORS
-import torchaudio
-
-# Attempt to configure torchaudio to use soundfile
-# In newer torchaudio versions, this might be automatic if soundfile is installed
-# but we explicitly check/set if possible to avoid the Windows issue.
-# Note: torchaudio.set_audio_backend is deprecated in 2.1+ and we use backend="soundfile" in calls instead.
-
 
 from backend.config import get_config
 from backend.utils.logger import setup_logger
