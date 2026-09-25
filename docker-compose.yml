@@ -1,0 +1,48 @@
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      FLASK_ENV: production
+      UPLOAD_FOLDER: /app/uploads
+      REDIS_URL: redis://redis:6379/0
+      JOB_TIMEOUT_SECONDS: "3600"
+    volumes:
+      - uploads:/app/uploads
+    ports:
+      - "5000:5000"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ["rq", "worker", "--url", "redis://redis:6379/0", "bassline"]
+    environment:
+      FLASK_ENV: production
+      UPLOAD_FOLDER: /app/uploads
+      REDIS_URL: redis://redis:6379/0
+      JOB_TIMEOUT_SECONDS: "3600"
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  redis-data:
+  uploads:

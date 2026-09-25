@@ -1,30 +1,21 @@
 FROM python:3.10-slim
 
-# Install system dependencies
-# ffmpeg is required for audio processing
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    build-essential \
+# Building basic-pitch from GitHub requires git; ffmpeg/libsndfile are used by audio IO.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg libsndfile1 git build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+# Build with repository root as Docker context (see docker-compose.yml).
+COPY backend/requirements.txt /app/backend/requirements.txt
+RUN pip install --no-cache-dir -r /app/backend/requirements.txt
+COPY backend/ /app/backend/
+RUN mkdir -p /app/uploads
 
-# Copy requirements first for caching
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+ENV PYTHONPATH=/app \
+    FLASK_ENV=production \
+    UPLOAD_FOLDER=/app/uploads \
+    REDIS_URL=redis://redis:6379/0
 
-# Copy application code
-COPY . .
-
-# Create uploads directory
-RUN mkdir -p temp_uploads
-
-# Set environment variables
-ENV FLASK_APP=backend.app
-ENV PYTHONPATH=/app
-
-# Expose port
 EXPOSE 5000
-
-# Run the application
 CMD ["python", "-m", "backend.app"]

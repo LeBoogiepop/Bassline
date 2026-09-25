@@ -59,13 +59,16 @@ export const uploadAndTranscribe = async (
     );
 
     let attempts = 0;
-    const maxAttempts = 300; // 5 minutes timeout (1s interval)
+    const maxAttempts = 3600; // Background processing may take up to one hour
 
     while (attempts < maxAttempts) {
       await new Promise((r) => setTimeout(r, 1000)); // Wait 1s
       attempts++;
 
       const statusResponse = await fetch(`${BACKEND_URL}/jobs/${job_id}`);
+      if (statusResponse.status === 503) {
+        throw new Error("Transcription queue is temporarily unavailable");
+      }
       if (!statusResponse.ok) continue;
 
       const jobData = await statusResponse.json();
