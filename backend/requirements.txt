@@ -9,3 +9,5 @@ basic-pitch @ git+https://github.com/spotify/basic-pitch.git
 python-dotenv==1.0.0
 requests==2.31.0
 werkzeug==3.0.1
+redis>=5,<6
+rq>=1.16,<2
