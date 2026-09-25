@@ -1,66 +1,66 @@
-import uuid
-import threading
-from concurrent.futures import ThreadPoolExecutor
-from enum import Enum
-from typing import Dict, Any, Optional
-from backend.utils.logger import logger
+"""Redis-backed transcription queue. API and worker share this state across restarts."""
+import os
+from redis import Redis
+from rq import Queue, Retry
+from rq.job import Job
+from rq.exceptions import NoSuchJobError
 
-class JobStatus(Enum):
-    PENDING = "pending"
-    PROCESSING = "processing"
-    COMPLETED = "completed"
-    FAILED = "failed"
 
-class JobManager:
-    """
-    Simple in-memory job manager for background tasks.
-    """
-    def __init__(self, max_workers=4):
-        self.executor = ThreadPoolExecutor(max_workers=max_workers)
-        self.jobs: Dict[str, Dict[str, Any]] = {}
-        self.lock = threading.Lock()
+class RedisJobManager:
+    def __init__(self, redis_url=None, connection=None):
+        self.connection = connection or Redis.from_url(
+            redis_url or os.environ.get("REDIS_URL", "redis://localhost:6379/0"),
+            socket_connect_timeout=3,
+            socket_timeout=5,
+        )
+        self.queue = Queue("bassline", connection=self.connection)
 
-    def create_job(self) -> str:
-        """Creates a new job and returns its ID."""
-        job_id = str(uuid.uuid4())
-        with self.lock:
-            self.jobs[job_id] = {
-                "status": JobStatus.PENDING.value,
-                "progress": 0,
-                "result": None,
-                "error": None
-            }
-        return job_id
+    def enqueue_transcription(self, file_path: str, difficulty: str) -> str:
+        """Only file paths and simple values enter the queue, never uploaded file bytes."""
+        job = self.queue.enqueue(
+            "backend.core.tasks.process_transcription_job",
+            file_path,
+            difficulty,
+            job_timeout=int(os.environ.get("JOB_TIMEOUT_SECONDS", "3600")),
+            result_ttl=86400,
+            failure_ttl=86400,
+            retry=Retry(max=2),
+            meta={"progress": 0},
+        )
+        return job.id
 
-    def update_job(self, job_id: str, status: JobStatus, progress: int = 0, result: Any = None, error: str = None):
-        """Updates the status of a job."""
-        with self.lock:
-            if job_id in self.jobs:
-                self.jobs[job_id]["status"] = status.value
-                self.jobs[job_id]["progress"] = progress
-                if result is not None:
-                    self.jobs[job_id]["result"] = result
-                if error is not None:
-                    self.jobs[job_id]["error"] = error
-                logger.debug(f"Job {job_id} updated: {status.value} ({progress}%)")
+    def get_job(self, job_id: str):
+        try:
+            job = Job.fetch(job_id, connection=self.connection)
+        except NoSuchJobError:
+            return None
 
-    def get_job(self, job_id: str) -> Optional[Dict[str, Any]]:
-        """Retrieves job status."""
-        with self.lock:
-            return self.jobs.get(job_id)
+        raw_status = job.get_status(refresh=True)
+        status = getattr(raw_status, "value", raw_status)
+        mapped_status = {
+            "queued": "pending",
+            "deferred": "pending",
+            "scheduled": "pending",
+            "started": "processing",
+            "finished": "completed",
+            "failed": "failed",
+            "stopped": "failed",
+            "canceled": "failed",
+        }.get(status, "pending")
+        progress = job.get_meta(refresh=True).get("progress", 0)
+        if mapped_status == "completed":
+            progress = 100
 
-    def submit_task(self, task_func, job_id: str, *args, **kwargs):
-        """Submits a task to the executor."""
-        def wrapper():
-            try:
-                self.update_job(job_id, JobStatus.PROCESSING, 0)
-                result = task_func(job_id, *args, **kwargs)
-                self.update_job(job_id, JobStatus.COMPLETED, 100, result)
-            except Exception as e:
-                logger.error(f"Job {job_id} failed: {e}", exc_info=True)
-                self.update_job(job_id, JobStatus.FAILED, error=str(e))
+        return {
+            "status": mapped_status,
+            "progress": progress,
+            "result": job.return_value() if mapped_status == "completed" else None,
+            # Do not disclose worker tracebacks and local paths to an unauthenticated client.
+            "error": "Transcription failed. Check worker logs." if mapped_status == "failed" else None,
+        }
 
-        self.executor.submit(wrapper)
+    def is_available(self) -> bool:
+        return bool(self.connection.ping())
 
-# Global instance
-job_manager = JobManager()
+
+job_manager = RedisJobManager()
